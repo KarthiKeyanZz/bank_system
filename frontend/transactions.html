@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transactions - Bank Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <header>
+        <h1>Bank System Dashboard</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="customers.html">Customers</a></li>
+                <li><a href="accounts.html">Accounts</a></li>
+                <li><a href="transactions.html" class="active">Transactions</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="transaction-section">
+            <h2>Recent Transactions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>From Account</th>
+                        <th>To Account</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionTableBody">
+                    <!-- JavaScript will populate this -->
+                </tbody>
+            </table>
+        </section>
+
+        <section class="transaction-form-section">
+            <h2>Create Transaction</h2>
+            <form id="transactionForm">
+                <label for="type">Transaction Type:</label>
+                <select id="type" name="type" required>
+                    <option value="deposit">Deposit</option>
+                    <option value="withdrawal">Withdrawal</option>
+                    <option value="transfer">Transfer</option>
+                </select>
+
+                <div id="fromAccountDiv">
+                    <label for="fromAccount">From Account ID:</label>
+                    <input type="number" id="fromAccount" name="fromAccount" />
+                </div>
+
+                <div id="toAccountDiv">
+                    <label for="toAccount">To Account ID:</label>
+                    <input type="number" id="toAccount" name="toAccount" />
+                </div>
+
+                <label for="amount">Amount:</label>
+                <input type="number" id="amount" name="amount" step="0.01" required />
+
+                <button type="submit">Submit</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Bank System</p>
+    </footer>
+
+    <script>
+        // Fetch transactions from API
+        fetch("http://localhost:9000/transactions/")
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById("transactionTableBody");
+                data.forEach(tx => {
+                    const row = `
+                        <tr>
+                            <td>${tx.id}</td>
+                            <td>${tx.transaction_type}</td>
+                            <td>${tx.from_account_id || "-"}</td>
+                            <td>${tx.to_account_id || "-"}</td>
+                            <td>$${tx.amount.toFixed(2)}</td>
+                            <td>${new Date(tx.timestamp).toLocaleString()}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            });
+
+        // Show/hide input fields depending on transaction type
+        const typeSelect = document.getElementById("type");
+        const fromDiv = document.getElementById("fromAccountDiv");
+        const toDiv = document.getElementById("toAccountDiv");
+
+        function toggleFields() {
+            const type = typeSelect.value;
+            fromDiv.style.display = type === "withdrawal" || type === "transfer" ? "block" : "none";
+            toDiv.style.display = type === "deposit" || type === "transfer" ? "block" : "none";
+        }
+
+        typeSelect.addEventListener("change", toggleFields);
+        toggleFields(); // Initial call
+
+        // Handle form submission
+        document.getElementById("transactionForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const type = typeSelect.value;
+            const amount = parseFloat(document.getElementById("amount").value);
+            const fromAccountId = parseInt(document.getElementById("fromAccount").value);
+            const toAccountId = parseInt(document.getElementById("toAccount").value);
+
+            let payload = { amount };
+
+            if (type === "deposit") {
+                payload.to_account_id = toAccountId;
+            } else if (type === "withdrawal") {
+                payload.from_account_id = fromAccountId;
+            } else if (type === "transfer") {
+                payload.from_account_id = fromAccountId;
+                payload.to_account_id = toAccountId;
+            }
+
+            fetch(`http://localhost:9000/transactions/${type}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert("Transaction successful!");
+                window.location.reload(); // Reload to show updated transaction list
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Error occurred while processing transaction.");
+            });
+        });
+    </script>
+</body>
+</html>

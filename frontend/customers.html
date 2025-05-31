@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Customers - Bank Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <header>
+        <h1>Bank System Dashboard</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="customers.html" class="active">Customers</a></li>
+                <li><a href="accounts.html">Accounts</a></li>
+                <li><a href="transactions.html">Transactions</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section>
+            <h2>Add New Customer</h2>
+            <form id="customer-form">
+                <label for="name">Name:</label><br />
+                <input type="text" id="name" name="name" required /><br />
+
+                <label for="email">Email:</label><br />
+                <input type="email" id="email" name="email" required /><br />
+
+                <button type="submit">Add Customer</button>
+            </form>
+            <p id="form-message"></p>
+        </section>
+
+        <section>
+            <h2>Customers List</h2>
+            <ul id="customers-list"></ul>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Bank System</p>
+    </footer>
+
+    <script>
+        const apiBaseUrl = "http://127.0.0.1:9000/customers";
+
+        // Fetch and display customers
+        async function loadCustomers() {
+            try {
+                const res = await fetch(apiBaseUrl);
+                if (!res.ok) throw new Error("Failed to fetch customers");
+                const customers = await res.json();
+                const list = document.getElementById("customers-list");
+                list.innerHTML = "";
+
+                if(customers.length === 0){
+                    list.innerHTML = "<li>No customers found.</li>";
+                    return;
+                }
+
+                customers.forEach(c => {
+                    const li = document.createElement("li");
+                    li.textContent = `${c.name} (${c.email}) - ID: ${c.id}`;
+                    list.appendChild(li);
+                });
+            } catch (error) {
+                alert("Error loading customers: " + error.message);
+            }
+        }
+
+        // Handle form submission
+        document.getElementById("customer-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const name = document.getElementById("name").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const messageEl = document.getElementById("form-message");
+
+            if (!name || !email) {
+                messageEl.textContent = "Please fill out all fields.";
+                messageEl.style.color = "red";
+                return;
+            }
+
+            try {
+                const res = await fetch(apiBaseUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ name, email })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || "Failed to add customer");
+                }
+
+                messageEl.textContent = "Customer added successfully!";
+                messageEl.style.color = "green";
+
+                // Clear form
+                e.target.reset();
+
+                // Reload customers list
+                loadCustomers();
+            } catch (error) {
+                messageEl.textContent = error.message;
+                messageEl.style.color = "red";
+            }
+        });
+
+        // Initial load
+        loadCustomers();
+    </script>
+</body>
+</html>
